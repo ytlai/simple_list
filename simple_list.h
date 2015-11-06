@@ -39,6 +39,7 @@ int add_section(numl *mlr,start,stop,int *len_of_mlr){
 				//ori: [4-5] insert: [4-6]
 				if(stop<=pos->num || stop==(pos->num)+1){
 					(ql+j++)=pos;
+					//Todo: merge list
 				}
 		}
 		else if ((mlr+i)->num==(stop+1)){
