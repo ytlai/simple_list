@@ -7,28 +7,44 @@ int main(){
 	printf("Usage:\tInput/Delete/List section.\n");
 	printf("Input:\tinput section, ex:Input 0,7\n");
 	printf("Delete:\tdelete section, ex:Delete 3,5\n");
-	printf("List:\t list all sections");
-	printf("Exit enter quit");
+	printf("List:\t list all sections\n");
+	printf("Exit enter quit\n");
 
-	struct list_head mlist = LIST_HEAD_INIT(mlist);
-	numl nl = {0,mlist};
-	numl *nl_root = &nl;
+
+
+	struct list_head nlist=LIST_HEAD_INIT(nlist);;
+
+	numl nl = {0,nlist};
+
 	int len_of_mlr =1;
-	numl *mlr=calloc(len_of_mlr,sizeof(numl));
+	int *len_mlr = &len_of_mlr;
+	multil _mlr ={&nl};
+	multil *mlr=calloc(len_of_mlr,sizeof(multil));
+	multil **mlr_ptr;
 	char input[15] = {0};
-	int quit = 0;
+	int errcode,quit = 0;
 	int operation[3] = {0};
-	mlr=nl_root;
+	mlr[0]=_mlr;
+	mlr_ptr = &mlr;
+	numl *pos;
+	struct list_head *head;
+	int i;
+	INIT_LIST_HEAD(&((mlr->head)->my_list));
+
+
+	i=0;
 
 	while(!quit){
 
+		printf("\n#: ");
 		fgets(input,14,stdin);
 		errcode = input_handler(input,operation);
 		if(!errcode){
 			switch(operation[0]){
 
 			case Input:
-				add_section();
+				add_section(mlr_ptr,operation[1],operation[2],len_mlr);
+				show_all_lists(*mlr_ptr,*len_mlr);
 				break;
 			case Delete:
 				break;
