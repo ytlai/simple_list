@@ -30,6 +30,7 @@ typedef struct multi_lists{
 }multil;
 
 int add_section(multil **mlr_ptr, multil **all, int start, int stop, int *len_of_mlr, int *all_len, int *s_mlr, int*s_all);
+int del_section(multil **mlr_ptr, multil **all, int start, int stop, int *len_of_mlr, int *all_len, int *s_mlr, int *s_all);
 int input_handler(char input[10],int *op);
 void show_all_lists(multil* mlr, int len_of_mlr);
 int init(multil **mlr_ptr,multil **all, int *all_len,int *s_all);

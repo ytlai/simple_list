@@ -279,7 +279,123 @@ int check_merge(multil **mlr_ptr, multil **all, int *len_of_mlr, int begin, int 
 
 }
 
+int check_consistency(multil **mlr_ptr, int *len_of_mlr, int *s_mlr, int which_head){
 
+
+	multil *mlr = *mlr_ptr;
+	numl *pos, *root, *prev;
+	int flag=0;
+	pos = list_first_entry(&(((mlr+which_head)->item)->my_list),typeof(numl),my_list);
+	prev = pos;
+	list_for_each_entry(pos,&(((mlr+which_head)->item)->my_list),my_list){
+
+		if (prev->num==pos->num || (prev->num)+1==(pos->num)){
+			prev = pos;
+		}
+		else{
+			flag=1;
+			break;
+		}
+	}
+
+	if(flag){
+
+		struct list_head mylist = LIST_HEAD_INIT(mylist);
+
+		numl new_nl ={prev->num,0,mylist};
+
+
+		if(*s_mlr<=*len_of_mlr ){
+			multil *tmp = realloc(mlr,(*len_of_mlr+1)*sizeof(multil));
+			if(tmp)
+				mlr=tmp;
+			else
+				exit(0);
+			*s_mlr=*s_mlr+1;
+		}
+
+		root = calloc(1,sizeof(numl));
+		root[0]= new_nl;
+		//printf("addr root %p addr new_nl %p \n",root,&new_nl);
+		INIT_LIST_HEAD(&(root->my_list));
+		mlr[*len_of_mlr].item = root;
+
+
+		*len_of_mlr= *len_of_mlr+1;
+
+		*mlr_ptr = mlr;
+
+		list_cut_position(&(root->my_list),&(((mlr+which_head)->item)->my_list),&(prev->my_list));
+
+
+	}
+
+}
+
+int del_section(multil **mlr_ptr, multil **all, int start, int stop, int *len_of_mlr, int *all_len, int *s_mlr, int *s_all){
+
+	int i,j,k,f, flag=0;
+	numl *pos, *first,*tmp;
+	multil *mlr = *mlr_ptr;
+
+	for(i=0;i<*len_of_mlr;i++){
+
+			pos=list_last_entry(&(((mlr+i)->item)->my_list),typeof(numl),my_list);
+			first = list_first_entry(&(((mlr+i)->item)->my_list),typeof(numl),my_list);
+			printf("pos->num %d\n",pos->num);
+			printf("mlr first num %d\n",first->num);
+
+			// if section is perfectly matched
+			if(start==(first->num) && stop==(pos->num))
+				flag =1;
+			// no intersection
+			else if((first->num)>stop || (pos->num)<start )
+				continue;
+			//org: 3-7 del 3-6, 5-7, 4-5
+			else if((first->num)<=start && (pos->num)>=stop){
+
+				j=k=f=0;
+
+				list_for_each_entry(tmp,&(((mlr+i)->item)->my_list),my_list){
+					++k;
+				}
+
+				while(1){
+					list_for_each_entry(tmp,&(((mlr+i)->item)->my_list),my_list)
+					{
+						++j;
+						//printf("tmp->num  %d ,(mlr+i)->item->num % d \n",tmp->num,(mlr+i)->item->num);
+						if (tmp->num >=start && tmp->num<=stop){
+							f=1;
+							break;
+						}
+
+
+					}
+
+					if(j==k && f==0)
+						break;
+
+					if(f){
+						list_del(&(tmp->my_list));
+						do_del_member(all,tmp->index,all_len);
+						f=0;
+					}
+					j=0;k=0;
+					list_for_each_entry(tmp,&(((mlr+i)->item)->my_list),my_list){
+											++k;
+					}
+
+				}
+				check_consistency(mlr_ptr, len_of_mlr, s_mlr, i);
+				break;
+			}
+
+
+	}
+
+	return 0;
+}
 int add_section(multil **mlr_ptr, multil **all, int start, int stop, int *len_of_mlr, int *all_len, int *s_mlr, int *s_all){
 
 
