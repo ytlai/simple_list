@@ -4,6 +4,21 @@
 
 int main(){
 
+
+	char input[15] = {0};
+	int errcode,quit = 0;
+	int operation[3] = {0};
+	int len_of_mlr =1, len_all_member=0, _s_all =0, _s_mlr=1;
+	int *len_mlr = &len_of_mlr;
+	int *all_len = &len_all_member;
+	int *s_all = &_s_all;
+	int *s_mlr = &_s_mlr;
+	multil **mlr_ptr = calloc(1,sizeof(multil));
+	multil **all = calloc(1,sizeof(multil));
+	init(mlr_ptr,all,all_len,s_all);
+	int j;
+
+
 	printf("Usage:\tInput/Delete/List section.\n");
 	printf("Input:\tinput section, ex:Input 0,7\n");
 	printf("Delete:\tdelete section, ex:Delete 3,5\n");
@@ -12,27 +27,6 @@ int main(){
 
 
 
-	struct list_head nlist=LIST_HEAD_INIT(nlist);;
-
-	numl nl = {0,nlist};
-
-	int len_of_mlr =1;
-	int *len_mlr = &len_of_mlr;
-	multil _mlr ={&nl};
-	multil *mlr=calloc(len_of_mlr,sizeof(multil));
-	multil **mlr_ptr;
-	char input[15] = {0};
-	int errcode,quit = 0;
-	int operation[3] = {0};
-	mlr[0]=_mlr;
-	mlr_ptr = &mlr;
-	numl *pos;
-	struct list_head *head;
-	int i;
-	INIT_LIST_HEAD(&((mlr->head)->my_list));
-
-
-	i=0;
 
 	while(!quit){
 
@@ -43,12 +37,13 @@ int main(){
 			switch(operation[0]){
 
 			case Input:
-				add_section(mlr_ptr,operation[1],operation[2],len_mlr);
+				add_section(mlr_ptr,all,operation[1],operation[2],len_mlr,all_len,s_mlr,s_all);
 				show_all_lists(*mlr_ptr,*len_mlr);
 				break;
 			case Delete:
 				break;
 			case List:
+				show_all_lists(*mlr_ptr,*len_mlr);
 				break;
 			case Quit:
 				quit=1;
@@ -61,8 +56,10 @@ int main(){
 		}
 		else if(errcode==1)
 			printf("Please enter Input/Delete/List or quit\n");
-		else
+		else if(errcode==2)
 			printf("Please add section afetr Input/Delete action\n");
+		else
+			printf("Please input incremental section\n");
 
 	}
 	return 0;
