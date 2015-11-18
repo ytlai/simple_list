@@ -41,6 +41,8 @@ int main(){
 				show_all_lists(*mlr_ptr,*len_mlr);
 				break;
 			case Delete:
+				del_section(mlr_ptr,all,operation[1],operation[2],len_mlr,all_len,s_mlr,s_all);
+				show_all_lists(*mlr_ptr,*len_mlr);
 				break;
 			case List:
 				show_all_lists(*mlr_ptr,*len_mlr);
