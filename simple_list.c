@@ -1,38 +1,116 @@
 #include "simple_list.h"
 
-int add_element(numl *root, int num, int i){
+
+int add_element(numl *root, int num, multil **all, int *all_len, int *s_all){
+
+	numl *new_member = calloc(1,sizeof(numl));
+	multil *mlr_member = *all;
+	multil *tmp=NULL;
+
+	if(*all_len <=0){
+		mlr_member =  calloc(1+*all_len,sizeof(multil));
+		*s_all=*s_all+1;
+	}
+	else{
+		if(*s_all<=*all_len){
+
+			tmp =  realloc(mlr_member, (1+*all_len)*sizeof(multil));
+			if (tmp)
+				mlr_member = tmp;
+			else{
+				printf("failed to realloc\n");
+				exit(0);
+
+			}
+			*s_all=*s_all+1;
+		}
+
+	}
 
 	struct list_head mylist = LIST_HEAD_INIT(mylist);
-	numl new_nl={num,mylist};
+	numl new_nl={num,*all_len,mylist};
+	new_member[0]=new_nl;
 
-	root[i]=new_nl;
-	INIT_LIST_HEAD(&(root[i].my_list));
 
-	if(i!=0)
-		list_add_tail(&(root[i].my_list), &(root->my_list));
+	INIT_LIST_HEAD(&(new_member->my_list));
+
+	list_add_tail(&(new_member->my_list), &(root->my_list));
+
+	mlr_member[*all_len].item = new_member;
+	*all = mlr_member;
+	*all_len=*all_len+1;
+
+
 	return 0;
 }
+int init(multil **mlr_ptr, multil **all, int *all_len,int *s_all){
 
-int do_del_mlr(multil *mlr,int begin,int *len_of_mlr){
+	int j;
+	numl *root = calloc(1,sizeof(numl));
+	multil *mlr_head = calloc(1,sizeof(multil));
+
+	struct list_head mylist = LIST_HEAD_INIT(mylist);
+	numl new_nl={0,0,mylist};
+	root[0] = new_nl;
+	INIT_LIST_HEAD(&(root->my_list));
+
+
+	mlr_head[0].item = root;
+
+	*mlr_ptr = mlr_head;
+	add_element(root,0,all,all_len, s_all);
+
+	return 0;
+
+}
+
+
+
+int do_del_mlr(multil **mlr_ptr,int begin,int *len_of_mlr){
 
 	int i;
+	multil *mlr =*mlr_ptr;
+	multil *tmp;
+
+	free(mlr[begin].item);
+
 	for(i=begin;i<(*len_of_mlr-1);i++)
-		mlr[i] = mlr[i+1];
+		mlr[i].item = mlr[i+1].item;
 
 	*len_of_mlr=*len_of_mlr-1;
 
 	return 0;
 }
 
+int do_del_member(multil **all,int begin, int *all_len){
 
-int do_merge(int type, numl *old, numl *new ){
+	multil *mlr_member =*all;
+	multil *tmp;
+
+	int j,i;
+
+
+	free(mlr_member[begin].item);
+	for(j=begin;j<(*all_len-1);j++){
+		mlr_member[j] = mlr_member[j+1];
+		mlr_member[j].item->index = j;
+	}
+
+	*all_len = *all_len-1;
+
+
+	return 0;
+}
+
+int do_merge(int type, numl *old, numl *new){
+
 
 	switch(type){
 	case TAIL:
-		list_add_tail( &(new->my_list),&(old->my_list));
+		list_splice_tail(&(new->my_list),&(old->my_list));
 		break;
 	case HEAD:
-		list_add( &(new->my_list),&(old->my_list));
+		list_splice(&(new->my_list),&(old->my_list));
 		break;
 	default:
 		break;
@@ -43,149 +121,268 @@ int do_merge(int type, numl *old, numl *new ){
 	return 0;
 }
 
-/*
-int check_merge(multil *mlr, int *len_of_mlr, int begin){
 
-	int i, start, stop, flag = 0;
-	numl  *pos, *tmp;
+int check_merge(multil **mlr_ptr, multil **all, int *len_of_mlr, int begin, int *all_len){
 
+	int i, j,k,f, start, stop, flag = 0;
+	numl  *pos, *tmp, *first;
+	multil *mlr = *mlr_ptr;
 
-	start = (mlr+begin)->head.num;
-	pos = list_last_entry(&(((mlr+begin)->head).my_list),typeof(numl),my_list);
+	start = (mlr+begin)->item->num;
+	pos = list_last_entry(&(((mlr+begin)->item)->my_list),typeof(numl),my_list);
 	stop = pos->num;
 
 
+	printf("begin = %d len %d\n",begin,*len_of_mlr);
 
 	for(i=0;i<*len_of_mlr;i++){
+
 
 		if (i==begin)
 			continue;
 
-		pos=list_last_entry(&(((mlr+i)->head).my_list),typeof(numl),my_list);
-		if(start==(mlr+i)->head.num && stop==(pos->num)){
+		pos=list_last_entry(&(((mlr+i)->item)->my_list),typeof(numl),my_list);
+		first = list_first_entry(&(((mlr+i)->item)->my_list),typeof(numl),my_list);
+
+		if(start==(first->num) && stop==(pos->num)){
 					flag=1;
 					break;
 		}
-		else if(start<(mlr+i)->head.num && stop>(pos->num)){
+		else if(start<(first->num) && stop>(pos->num)){
 					//list i: [4-5] list begin: [3-7]
+			printf("merge:1  start %d stop %d, mlr start %d stop %d\n", start, stop,(first->num),pos->num);
 					flag=2;
 					break;
 				}
 
-		else if (start>=(mlr+i)->head.num && start<=(pos->num+1)){
+		else if (start>=(first->num) && start<=(pos->num+1)){
 				//list i: [4-7] list begin: [5-9] || [8-9]
-				if(stop>(pos->num)){
-					for(tmp=&((mlr+i)->head);;tmp = list_next_entry(tmp,my_list)){
-						if (tmp->num>=start && tmp->num<=pos->num)
-							list_del(&tmp->my_list);
+			if(stop>(pos->num)){
+
+				printf("merge:2  start %d stop %d, mlr start %d stop %d\n", start, stop,(first->num),pos->num);
+					j=k=f=0;
+
+					list_for_each_entry(tmp,&(((mlr+i)->item)->my_list),my_list){
+						++k;
 					}
-					do_merge(TAIL,&((mlr+i)->head),&((mlr+begin)->head));
+
+					while(1){
+						list_for_each_entry(tmp,&(((mlr+i)->item)->my_list),my_list)
+						{
+							++j;
+							//printf("tmp->num  %d ,(mlr+i)->item->num % d \n",tmp->num,(mlr+i)->item->num);
+							if (tmp->num >=start && tmp->num<=stop){
+								f=1;
+								break;
+							}
+
+
+						}
+
+						if(j==k && f==0)
+							break;
+
+						if(f){
+							list_del(&(tmp->my_list));
+							do_del_member(all,tmp->index,all_len);
+							f=0;
+						}
+						j=0;k=0;
+						list_for_each_entry(tmp,&(((mlr+i)->item)->my_list),my_list){
+												++k;
+						}
+
+
+					}
+
+
+					//move_list(mlr_ptr,added_len,(mlr+begin)->item);
+					do_merge(TAIL,((mlr+i)->item),(mlr+begin)->item);
 					flag =1;
 					break;
 				}
 
 		}
-		else if(start < (mlr+i)->head.num) {
-					//list i: [4-7], list begin: [1-5] || [1-3]
-				if ((stop+1) >=(mlr+i)->head.num){
-					for(tmp=&((mlr+begin)->head);;tmp = list_next_entry(tmp,my_list)){
-						if (tmp->num >=(mlr+i)->head.num && tmp->num<=stop)
-							list_del(&tmp->my_list);
+
+		else if(start < (first->num)) {
+					//list i: [4-7],[9-13] list begin: [1-5] || [1-3] [0-12]
+
+				if ((stop+1) >=(first->num)){
+					printf("merge:3  start %d stop %d, mlr start %d stop %d\n", start, stop,(first->num),pos->num);
+
+					j=k=f=0;
+
+					list_for_each_entry(tmp,&(((mlr+begin)->item)->my_list),my_list){
+						++k;
 					}
-					do_merge(HEAD,&((mlr+i)->head),&((mlr+begin)->head));
+					while(1){
+						list_for_each_entry(tmp,&(((mlr+begin)->item)->my_list),my_list)
+						{
+							++j;
+
+							if (tmp->num >=(first->num) && tmp->num<=stop){
+								f=1;
+								break;
+							}
+
+
+						}
+
+						if(j==k && f==0)
+							break;
+
+						if(f){
+							list_del(&(tmp->my_list));
+							printf("index to delete %d \n",tmp->index);
+							do_del_member(all,tmp->index,all_len);
+							f=0;
+						}
+						j=0;k=0;
+						list_for_each_entry(tmp,&(((mlr+begin)->item)->my_list),my_list){
+												++k;
+						}
+
+
+					}
+					do_merge(HEAD,((mlr+i)->item),(mlr+begin)->item);
 					flag =1;
+
 					break;
 				}
 		}
+
 
 	}
 
 	switch(flag){
 
 	case 1:
-		do_del_mlr(mlr,begin,len_of_mlr);
+		do_del_mlr(mlr_ptr,begin,len_of_mlr);
 		break;
 	case 2:
-		do_del_mlr(mlr,i,len_of_mlr);
+		do_del_mlr(mlr_ptr,i,len_of_mlr);
+		break;
+	default:
 		break;
 	}
 
-	if(flag)
-		return 1;
+	printf("In merge\n");
+	printf("len of mlr %d\n",*len_of_mlr);
 
+	for(i=0;i<*len_of_mlr;i++){
+		printf("%d \n",(*mlr_ptr +i)->item->num);
+	}
+	printf("len of all %d\n",*all_len);
+	for(i=0;i<*all_len;i++){
+			printf("%d \n",(*all +i)->item->num);
+		}
 
-	return 0;
 }
 
-*/
-int add_section(multil **mlr_ptr, int start, int stop, int *len_of_mlr){
+
+int add_section(multil **mlr_ptr, multil **all, int start, int stop, int *len_of_mlr, int *all_len, int *s_mlr, int *s_all){
+
 
 	int i,j,flag=0;
-	numl *pos, *root;
+	numl *pos, *root, *first;
 	multil *mlr = *mlr_ptr;
+
 
 
 	/*Find one of the qualified list for section to insert */
 
 	for(i=0;i<*len_of_mlr;i++){
 
-		pos=list_last_entry(&(((mlr+i)->head)->my_list),typeof(numl),my_list);
+		pos=list_last_entry(&(((mlr+i)->item)->my_list),typeof(numl),my_list);
+		first = list_first_entry(&(((mlr+i)->item)->my_list),typeof(numl),my_list);
+		printf("pos->num %d\n",pos->num);
+		printf("mlr first num %d\n",first->num);
 
 		// if section is perfectly matched, do nothing
-		if(start==(mlr+i)->head->num && stop==(pos->num))
+		if(start==(first->num) && stop==(pos->num))
 			return 0;
+		else if((first->num)<=start && (pos->num)>=stop){
+			printf("hello\n");
+			return 0;
+		}
 
-
-
-		else if(start<(mlr+i)->head->num && stop>(pos->num)){
+		else if(start<(first->num) && stop>(pos->num)){
 			//ori: [4-5] insert: [3-7]
-
+			printf("add:1  start %d stop %d, mlr start %d stop %d\n", start, stop,(first->num),pos->num);
 			struct list_head mylist = LIST_HEAD_INIT(mylist);
-			numl new_nl ={start,mylist};
+			numl new_nl ={start,0,mylist};
 
-			root =calloc((stop-start+1),sizeof(numl));
+			root = calloc(1,sizeof(numl));
 			root[0]= new_nl;
-			INIT_LIST_HEAD(&(root[0].my_list));
-			mlr[i].head = root;
+			INIT_LIST_HEAD(&(root->my_list));
+			free(mlr[i].item);
+			mlr[i].item = root;
 
-			for(j=start+1;j<stop+1;j++)
-				add_element(root,j,j-start);
+			for(j=start;j<stop+1;j++)
+				add_element(root,j,all,all_len,s_all);
 			break;
 		}
-		//Todo: fix sth wrong
-		else if (start>=(mlr+i)->head->num && start<=(pos->num+1)){
+
+		else if (start>=(first->num) && start<=(pos->num+1)){
 				//ori: [4-7] insert: [5-9] || [8-9]
+
 				if(stop>(pos->num)){
+					printf("add:2  start %d stop %d, mlr start %d stop %d\n", start, stop,(first->num),pos->num);
+
+
 
 					struct list_head mylist = LIST_HEAD_INIT(mylist);
-					numl new_nl ={(1+pos->num),mylist};
+					numl new_nl ={(1+pos->num),0,mylist};
 
-					root =calloc((stop-(1+pos->num)+1),sizeof(numl));
+
+					root = calloc(1,sizeof(numl));
+
 					root[0]= new_nl;
-					INIT_LIST_HEAD(&(root[0].my_list));
+					INIT_LIST_HEAD(&(root->my_list));
 
-					for(j=(2+pos->num);j<(stop+1);j++)
-						add_element(root,j,j-start);
 
-					do_merge(TAIL,&((mlr+i)->head),root);
+					j=0;
+
+					for(j=(1+pos->num);j<(stop+1);j++)
+						add_element(root,j,all,all_len,s_all);
+
+					do_merge(TAIL,((mlr+i)->item),root);
+					free(root);
+
 				}
+				//show_all_lists(mlr,*len_of_mlr);
+
 				break;
 		}
-		/*
-		else if(start < (mlr+i)->head.num) {
+
+		else if(start < (first->num)) {
 			//ori: [4-7], insert: [1-5]
-			if ((stop+1) >= (mlr+i)->head.num){
+			if ((stop+1) >= (first->num)){
+				printf("add:3  start %d stop %d, mlr start %d stop %d\n", start, stop,(first->num),pos->num);
 
-				new_nl.num = start;
-				new_nl.my_list = mylist;
-				INIT_LIST_HEAD(&(new_nl.my_list));
-				for(j=(start+1);j<(mlr+i)->head.num;j++)
-					add_element(&new_nl,j);
-				do_merge(HEAD,&((mlr+i)->head),&new_nl);
+				struct list_head mylist = LIST_HEAD_INIT(mylist);
+
+				numl new_nl ={start,0,mylist};
+
+
+				root = calloc(1,sizeof(numl));
+				root[0]= new_nl;
+				INIT_LIST_HEAD(&(root->my_list));
+
+
+
+				j=0;
+
+				for(j=start;j<(first->num);j++)
+					add_element(root,j,all,all_len,s_all);
+
+				do_merge(HEAD,((mlr+i)->item),root);
+
 				}
+				free(root);
 				break;
 		}
-		*/
+
 
 		else
 			++flag;
@@ -197,25 +394,49 @@ int add_section(multil **mlr_ptr, int start, int stop, int *len_of_mlr){
 
 	if(flag==*len_of_mlr){
 
+		printf("hello\n");
+
+		//printf("hello %d %d\n",*len_of_mlr,i);
+		multil *tmp;
 		struct list_head mylist = LIST_HEAD_INIT(mylist);
-		numl new_nl ={start,mylist};
 
-		mlr = realloc(mlr,*len_of_mlr);
-		root =calloc((stop-start+1),sizeof(numl));
-		root[0]=new_nl;
-		INIT_LIST_HEAD(&(root[0].my_list));
-		mlr[i].head = root;
+		numl new_nl ={start,0,mylist};
 
-
-		for(j=start+1;j<stop+1;j++){
-			add_element(root,j,j-start);
-
+		if(*s_mlr<=*len_of_mlr ){
+			tmp = realloc(mlr,(*len_of_mlr+1)*sizeof(multil));
+			if(tmp)
+				mlr=tmp;
+			else
+				exit(0);
+			*s_mlr=*s_mlr+1;
 		}
 
+		root = calloc(1,sizeof(numl));
+		root[0]= new_nl;
+		//printf("addr root %p addr new_nl %p \n",root,&new_nl);
+		INIT_LIST_HEAD(&(root->my_list));
+		mlr[i].item = root;
+
+
+		for(j=start;j<stop+1;j++)
+			add_element(root,j,all,all_len,s_all);
 
 
 		*len_of_mlr= *len_of_mlr+1;
+
 		*mlr_ptr = mlr;
+
+		printf("In add_section\n");
+		printf("len of mlr %d\n",*len_of_mlr);
+
+			for(i=0;i<*len_of_mlr;i++){
+				printf("%d \n",(*mlr_ptr +i)->item->num);
+			}
+			printf("len of all %d\n",*all_len);
+			for(i=0;i<*all_len;i++){
+					printf("%d \n",(*all +i)->item->num);
+				}
+
 	}
 
 	else{
@@ -223,9 +444,25 @@ int add_section(multil **mlr_ptr, int start, int stop, int *len_of_mlr){
 	//Todo: check merge;
 
 	*mlr_ptr = mlr;
+
+	printf("Before merge\n");
+	printf("len of mlr %d\n",*len_of_mlr);
+
+		for(i=0;i<*len_of_mlr;i++){
+			printf("%d \n",(*mlr_ptr +i)->item->num);
+		}
+		printf("len of all %d\n",*all_len);
+		for(i=0;i<*all_len;i++){
+				printf("%d \n",(*all +i)->item->num);
+			}
+
 	i=0;
-	//while(check_merge(mlr,len_of_mlr,i))
-		++i;
+	//printf("len of mlr %d \n",*len_of_mlr );
+	while(i<*len_of_mlr){
+		check_merge(mlr_ptr,all,len_of_mlr,i,all_len);
+	++i;}
+
+
 
 	}
 
@@ -235,21 +472,28 @@ int add_section(multil **mlr_ptr, int start, int stop, int *len_of_mlr){
 	return 0;
 }
 
-int show_all_lists(multil* mlr, int len_of_mlr){
+void show_all_lists(multil* mlr, int len_of_mlr){
 
 	int i;
 	numl *pos;
+	//printf("\n\n%d\n",len_of_mlr);
+
+
+
 	for(i=0;i<len_of_mlr;i++){
 		printf("List %d:\t",i);
-		if(!i){
-			pos=list_first_entry(&(((mlr+i)->head)->my_list),numl,my_list);
-			printf("%d, ",pos->num);
-		}
-		list_for_each_entry(pos,&(((mlr+i)->head)->my_list),my_list){
-			printf("%d, ",pos->num);
-		}
 
+
+
+		list_for_each_entry(pos,&(((mlr+i)->item)->my_list),my_list){
+							printf("%d, ",pos->num);
+
+
+		}
 		printf("\n");
+
+
+
 	}
 
 }
@@ -314,6 +558,9 @@ int input_handler(char input[10],int *op){
 		if(strlen(start)==0 || strlen(stop)==0)
 			errcode=2;
 
+	if(_act==0 || _act==1)
+		if(atoi(stop)-atoi(start)<0)
+			errcode = 3;
 
 	op[0]=_act;
 	op[1]=atoi(start);
