@@ -1,9 +1,5 @@
 #include "simple_list.h"
-
-
-
 int main(){
-
 
 	char input[15] = {0};
 	int errcode,quit = 0;
@@ -16,17 +12,12 @@ int main(){
 	multil **mlr_ptr = calloc(1,sizeof(multil));
 	multil **all = calloc(1,sizeof(multil));
 	init(mlr_ptr,all,all_len,s_all);
-	int j;
-
 
 	printf("Usage:\tInput/Delete/List section.\n");
 	printf("Input:\tinput section, ex:Input 0,7\n");
 	printf("Delete:\tdelete section, ex:Delete 3,5\n");
 	printf("List:\t list all sections\n");
 	printf("Exit enter quit\n");
-
-
-
 
 	while(!quit){
 
@@ -54,8 +45,8 @@ int main(){
 				break;
 
 			}
-
 		}
+
 		else if(errcode==1)
 			printf("Please enter Input/Delete/List or quit\n");
 		else if(errcode==2)
