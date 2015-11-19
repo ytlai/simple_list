@@ -1,2 +1,2 @@
 # simple_list
-list merge and move
+simple list to add and delete section
