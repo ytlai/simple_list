@@ -1,95 +1,89 @@
 #include "simple_list.h"
 
-int add_element(numl *root, int num, multil **all, int *all_len, int *s_all){
+int add_element(area *root, int num, d_linkd_list **elements, int *ele_num, int *all_space){
 
-	numl *new_member = calloc(1,sizeof(numl));
-	multil *mlr_member = *all;
-	multil *tmp=NULL;
+	d_linkd_list *_elements = *elements;
+	d_linkd_list *tmp=NULL;
 
-	if(*all_len <=0){
-		mlr_member =  calloc(1+*all_len,sizeof(multil));
-		*s_all=*s_all+1;
+	if (*ele_num <=0) {
+		_elements = (d_linkd_list*) calloc (1+*ele_num,sizeof(d_linkd_list));
+		*all_space=*all_space+1;
 	}
-	else{
-		if(*s_all<=*all_len){
-
-			tmp =  realloc(mlr_member, (1+*all_len)*sizeof(multil));
+	else {
+		if (*all_space<=*ele_num) {
+			tmp =  realloc(_elements, (1+*ele_num)*sizeof(d_linkd_list));
 			if (tmp)
-				mlr_member = tmp;
-			else{
-				printf("failed to realloc\n");
-				exit(0);
-
+				_elements = tmp;
+			else {
+				printf ("failed to allocate new space for element\n");
+				exit (0);
 			}
-			*s_all=*s_all+1;
+			*all_space = *all_space+1;
 		}
-
 	}
-
-	struct list_head mylist = LIST_HEAD_INIT(mylist);
-	numl new_nl={num,*all_len,mylist};
-	new_member[0]=new_nl;
-	INIT_LIST_HEAD(&(new_member->my_list));
-	list_add_tail(&(new_member->my_list), &(root->my_list));
-	mlr_member[*all_len].item = new_member;
-	*all = mlr_member;
-	*all_len=*all_len+1;
+	_elements[*ele_num].item = area_new (*ele_num,num);
+	INIT_LIST_HEAD(&((_elements[*ele_num].item)->list));
+	list_add_tail(&((_elements[*ele_num].item)->list), &(root->list));
+	*elements = _elements;
+	*ele_num = *ele_num+1;
 	return 0;
 }
 
-int init(multil **mlr_ptr, multil **all, int *all_len,int *s_all){
+int add_head(d_linkd_list **heads, int *head_num, int *head_space){
 
-	numl *root = calloc(1,sizeof(numl));
-	multil *mlr_head = calloc(1,sizeof(multil));
-	struct list_head mylist = LIST_HEAD_INIT(mylist);
-	numl new_nl={0,0,mylist};
+	d_linkd_list *tmp;
+	d_linkd_list *head_list = *heads;
 
-	root[0] = new_nl;
-	INIT_LIST_HEAD(&(root->my_list));
-	mlr_head[0].item = root;
-	*mlr_ptr = mlr_head;
-	add_element(root,0,all,all_len, s_all);
+	if ( *head_space <= *head_num ){
+		tmp = (d_linkd_list*) realloc (head_list,(*head_num+1)*sizeof(d_linkd_list));
+		if (tmp)
+			head_list=tmp;
+		else {
+			printf ("failed to allocate new space for new area\n");
+			exit (0);
+		}
+		*head_space = *head_space + 1;
+	}
+	head_list[*head_num].item = area_new (*head_num, 0);
+	INIT_LIST_HEAD(&((head_list[*head_num].item)->list));
+
+	*head_num= *head_num+1;
+	*heads = head_list;
 	return 0;
 }
 
-int do_del_mlr(multil **mlr_ptr,int begin,int *len_of_mlr){
+int _del_head(d_linkd_list **heads,int begin,int *head_num){
 
+	d_linkd_list *head_list =*heads;
 	int i;
-	multil *mlr =*mlr_ptr;
-
-	free(mlr[begin].item);
-
-	for(i=begin;i<(*len_of_mlr-1);i++)
-		mlr[i].item = mlr[i+1].item;
-
-	*len_of_mlr=*len_of_mlr-1;
-
+	free(head_list[begin].item);
+	for (i=begin;i<(*head_num-1);i++)
+		head_list[i].item = head_list[i+1].item;
+	*head_num = *head_num-1;
 	return 0;
 }
 
-int do_del_member(multil **all,int begin, int *all_len){
+int _del_element(d_linkd_list **elements,int begin, int *ele_num){
 
-	multil *mlr_member =*all;
+	d_linkd_list *_elements =*elements;
 	int j;
-
-	free(mlr_member[begin].item);
-	for(j=begin;j<(*all_len-1);j++){
-		mlr_member[j] = mlr_member[j+1];
-		mlr_member[j].item->index = j;
+	free (_elements[begin].item);
+	for (j=begin;j<(*ele_num-1);j++) {
+		_elements[j] = _elements[j+1];
+		_elements[j].item->index = j;
 	}
-
-	*all_len = *all_len-1;
+	*ele_num = *ele_num-1;
 	return 0;
 }
 
-int do_merge(int type, numl *old, numl *new){
+int do_merge(int type, area *old, area *new){
 
 	switch(type){
 		case TAIL:
-			list_splice_tail(&(new->my_list),&(old->my_list));
+			list_splice_tail(&(new->list),&(old->list));
 			break;
 		case HEAD:
-			list_splice(&(new->my_list),&(old->my_list));
+			list_splice(&(new->list),&(old->list));
 			break;
 		default:
 			break;
@@ -97,349 +91,205 @@ int do_merge(int type, numl *old, numl *new){
 	return 0;
 }
 
-int check_merge(multil **mlr_ptr, multil **all, int *len_of_mlr, int begin, int *all_len){
+int check_merge(d_linkd_list **heads, d_linkd_list **elements, int *head_num, int begin, int *ele_num){
 
-	int i, j,k,f, start, stop, flag = 0;
-	numl  *pos, *tmp, *first;
-	multil *mlr = *mlr_ptr;
+	int i, j, k, f, start, stop, flag = 0;
+	area  *last, *tmp, *first;
+	d_linkd_list *head_list = *heads;
 
-	start = (mlr+begin)->item->num;
-	pos = list_last_entry(&(((mlr+begin)->item)->my_list),typeof(numl),my_list);
-	stop = pos->num;
+	first= list_first_entry(&(((head_list+begin)->item)->list),typeof(area),list);
+	last = list_last_entry(&(((head_list+begin)->item)->list),typeof(area),list);
+	start = first->num;
+	stop = last->num;
 
-	for(i=0;i<*len_of_mlr;i++){
-
+	for (i=0;i<*head_num;i++) {
 		if (i==begin)
 			continue;
 
-		pos=list_last_entry(&(((mlr+i)->item)->my_list),typeof(numl),my_list);
-		first = list_first_entry(&(((mlr+i)->item)->my_list),typeof(numl),my_list);
+		last=list_last_entry(&(((head_list+i)->item)->list),typeof(area),list);
+		first = list_first_entry(&(((head_list+i)->item)->list),typeof(area),list);
 
-		if(start==(first->num) && stop==(pos->num)){
+		if (start==(first->num) && stop==(last->num)) {
 			flag=1;
 			break;
 		}
-		else if(start<(first->num) && stop>(pos->num)){
-			//list i: [4-5] list begin: [3-7]
+		else if (start<(first->num) && stop>(last->num)) {
 			flag=2;
 			break;
 		}
-
-		else if (start>=(first->num) && start<=(pos->num+1)){
-			//list i: [4-7] list begin: [5-9] || [8-9]
-			if(stop>(pos->num)){
-
-				j=k=f=0;
-				list_for_each_entry(tmp,&(((mlr+i)->item)->my_list),my_list){
-					++k;}
-
-				while(1){
-					list_for_each_entry(tmp,&(((mlr+i)->item)->my_list),my_list){
-					++j;
-
-					if (tmp->num >=start && tmp->num<=stop){
-						f=1;
-						break;
-						}
-					}
-
-					if(j==k && f==0)
-						break;
-
-					if(f){
-						list_del(&(tmp->my_list));
-						do_del_member(all,tmp->index,all_len);
-						f=0;
-					}
-					j=0;k=0;
-					list_for_each_entry(tmp,&(((mlr+i)->item)->my_list),my_list){
-						++k;}
-				}
-
-				do_merge(TAIL,((mlr+i)->item),(mlr+begin)->item);
-				flag =1;
-				break;
-			}
+		else if (start>=(first->num) && start<=(last->num+1) && stop>(last->num) ){
+			DEL_AREA(i,start);
+			do_merge(TAIL,((head_list+i)->item),(head_list+begin)->item); \
+			flag =1;
+			break;
 		}
-
-		else if(start < (first->num)) {
-			//list i: [4-7],[9-13] list begin: [1-5] || [1-3] [0-12]
-			if ((stop+1) >=(first->num)){
-
-				j=k=f=0;
-				list_for_each_entry(tmp,&(((mlr+begin)->item)->my_list),my_list){
-					++k;}
-
-				while(1){
-					list_for_each_entry(tmp,&(((mlr+begin)->item)->my_list),my_list){
-						++j;
-						if (tmp->num >=(first->num) && tmp->num<=stop){
-							f=1;
-							break;
-						}
-					}
-
-					if(j==k && f==0)
-						break;
-
-					if(f){
-						list_del(&(tmp->my_list));
-						do_del_member(all,tmp->index,all_len);
-						f=0;
-					}
-
-					j=0;k=0;
-					list_for_each_entry(tmp,&(((mlr+begin)->item)->my_list),my_list){
-						++k;}
-				}
-
-				do_merge(HEAD,((mlr+i)->item),(mlr+begin)->item);
-				flag =1;
-				break;
-			}
+		else if (start < (first->num) && (stop+1) >=(first->num)) {
+			DEL_AREA(begin,(first->num));
+			do_merge(HEAD,((head_list+i)->item),(head_list+begin)->item); \
+			flag =1;
+			break;
 		}
 	}
 	switch(flag){
 		case 1:
-			do_del_mlr(mlr_ptr,begin,len_of_mlr);
+			_del_head(heads,begin,head_num);
 			break;
 		case 2:
-			do_del_mlr(mlr_ptr,i,len_of_mlr);
+			_del_head(heads,i,head_num);
 			break;
 		default:
 			break;
 	}
+
+	return 0;
 }
 
-int check_consistency(multil **mlr_ptr, int *len_of_mlr, int *s_mlr, int which_head){
+int check_area_consistency(d_linkd_list **heads, int *head_num, int *head_space, int which_head){
 
-	multil *mlr = *mlr_ptr;
-	numl *pos, *root, *prev;
-	int flag=0;
-	pos = list_first_entry(&(((mlr+which_head)->item)->my_list),typeof(numl),my_list);
+	d_linkd_list *head_list = *heads;
+	area *pos, *prev;
+	int flag = 0;
+	pos = list_first_entry(&(((head_list+which_head)->item)->list),typeof(area),list);
 	prev = pos;
 
-	list_for_each_entry(pos,&(((mlr+which_head)->item)->my_list),my_list){
+	list_for_each_entry (pos,&(((head_list+which_head)->item)->list),list) {
 		if (prev->num==pos->num || (prev->num)+1==(pos->num))
 			prev = pos;
-		else{
+		else {
 			flag=1;
 			break;
 		}
 	}
-
-	if(flag){
-		struct list_head mylist = LIST_HEAD_INIT(mylist);
-		numl new_nl ={prev->num,0,mylist};
-
-		if(*s_mlr<=*len_of_mlr ){
-			multil *tmp = realloc(mlr,(*len_of_mlr+1)*sizeof(multil));
-			if(tmp)
-				mlr=tmp;
-			else
-				exit(0);
-			*s_mlr=*s_mlr+1;
-		}
-
-		root = calloc(1,sizeof(numl));
-		root[0]= new_nl;
-		INIT_LIST_HEAD(&(root->my_list));
-		mlr[*len_of_mlr].item = root;
-		*len_of_mlr= *len_of_mlr+1;
-		*mlr_ptr = mlr;
-		list_cut_position(&(root->my_list),&(((mlr+which_head)->item)->my_list),&(prev->my_list));
+	if (flag) {
+		add_head(heads, head_num, head_space);
+		list_cut_position(&((head_list[*head_num-1].item)->list),&(((head_list+which_head)->item)->list),&(prev->list));
 	}
-
+	return 0;
 }
 
-int del_section(multil **mlr_ptr, multil **all, int start, int stop, int *len_of_mlr, int *all_len, int *s_mlr, int *s_all){
+int area_count(area *_area){
 
-	int i,j,k,f, flag=0,ck=0;
-	numl *pos, *first,*tmp;
-	multil *mlr = *mlr_ptr;
+	int k=0;
+	area *tmp;
+	list_for_each_entry (tmp,&(_area->list),list) {
+		++k;
+	}
+	return k;
+}
+int area_delete(d_linkd_list **heads, d_linkd_list **elements, int start, int stop, int *head_num, int *ele_num, int *head_space, int *ele_space){
 
-	while(ck != *len_of_mlr){
+	int i,j,k,f,flag=0,ck=0;
+	area *last, *first,*tmp;
+	d_linkd_list *head_list = *heads;
+
+	while (ck != *head_num) {
+
 		ck=0;
-		for(i=0;i<*len_of_mlr;i++){
+		for (i=0;i<*head_num;i++) {
 
-			pos=list_last_entry(&(((mlr+i)->item)->my_list),typeof(numl),my_list);
-			first = list_first_entry(&(((mlr+i)->item)->my_list),typeof(numl),my_list);
-
-			// perfect match
-			if((first->num)>=start && (pos->num)<=stop ){
+			last = list_last_entry(&(((head_list+i)->item)->list),typeof(area),list);
+			first = list_first_entry(&(((head_list+i)->item)->list),typeof(area),list);
+			if ( (first->num)>=start && (last->num)<=stop ){
 				flag = 1;
 				break;
 			}
-
-			// no intersection
-			else if((first->num)>stop || (pos->num)<start )
+			else if ( (first->num)>stop || (last->num)<start )
 				++ck;
-
-			//org: 3-7 del 3-6, 5-7, 4-5
-			else{
-
-				j=k=f=0;
-				list_for_each_entry(tmp,&(((mlr+i)->item)->my_list),my_list){
-					++k;}
-
-				while(1){
-					list_for_each_entry(tmp,&(((mlr+i)->item)->my_list),my_list){
-						++j;
-						if (tmp->num >=start && tmp->num<=stop){
-							f=1;
-							break;
-						}
-					}
-					if(j==k && f==0)
-						break;
-
-					if(f){
-						list_del(&(tmp->my_list));
-						do_del_member(all,tmp->index,all_len);
-						f=0;
-					}
-					j=0;k=0;
-					list_for_each_entry(tmp,&(((mlr+i)->item)->my_list),my_list){
-						++k;
-					}
-				}
-				check_consistency(mlr_ptr, len_of_mlr, s_mlr, i);
+			//i: 3-7 del 3-6, 5-7, 4-5
+			else {
+				DEL_AREA(i,start);
+				check_area_consistency(heads, head_num, head_space, i);
 				break;
 			}
 		}
-
 		if(flag==1){
-			do_del_mlr(mlr_ptr,i,len_of_mlr);
+			_del_head(heads,i,head_num);
 			flag = 0;
 		}
 	}
-
 	return 0;
 }
 
-int add_section(multil **mlr_ptr, multil **all, int start, int stop, int *len_of_mlr, int *all_len, int *s_mlr, int *s_all){
+area *area_new (int index, int num){
 
+	struct list_head newlist = LIST_HEAD_INIT(newlist);
+	area new_a = { index, num, newlist };
+	area *root = (area*) calloc (1,sizeof(area));
+	root[0] = new_a;
+	return root;
+}
+int area_find(area *_area, int num){
 
-	int i,j,flag=0;
-	numl *last, *root, *first;
-	multil *mlr = *mlr_ptr;
+	area *last = list_last_entry(&(_area->list),typeof(area),list);
+	area *first = list_first_entry(&(_area->list),typeof(area),list);
 
-	/*Find one of the qualified list for section to insert */
-
-	for(i=0;i<*len_of_mlr;i++){
-
-		last=list_last_entry(&(((mlr+i)->item)->my_list),typeof(numl),my_list);
-		first = list_first_entry(&(((mlr+i)->item)->my_list),typeof(numl),my_list);
-
-		// if section is perfectly matched, do nothing
-		if(start==(first->num) && stop==(last->num))
-			return 0;
-
-		else if((first->num)<=start && (last->num)>=stop)
-			return 0;
-
-		else if(start<(first->num) && stop>(last->num)){
-			//ori: [4-5] insert: [3-7]
-			struct list_head mylist = LIST_HEAD_INIT(mylist);
-			numl new_nl ={start,0,mylist};
-
-			root = calloc(1,sizeof(numl));
-			root[0]= new_nl;
-			INIT_LIST_HEAD(&(root->my_list));
-			free(mlr[i].item);
-			mlr[i].item = root;
-
-			for(j=start;j<stop+1;j++)
-				add_element(root,j,all,all_len,s_all);
-			break;
-		}
-
-		else if (start>=(first->num) && start<=(last->num+1) && stop>(last->num)){
-			//ori: [4-7] insert: [5-9] || [8-9]
-			struct list_head mylist = LIST_HEAD_INIT(mylist);
-			numl new_nl ={(1+last->num),0,mylist};
-
-			root = calloc(1,sizeof(numl));
-			root[0]= new_nl;
-			INIT_LIST_HEAD(&(root->my_list));
-			j=0;
-
-			for(j=(1+last->num);j<(stop+1);j++)
-				add_element(root,j,all,all_len,s_all);
-
-			do_merge(TAIL,((mlr+i)->item),root);
-			free(root);
-			break;
-		}
-
-		else if(start < (first->num) && (stop+1) >= (first->num)) {
-			//ori: [4-7], insert: [1-5]
-			struct list_head mylist = LIST_HEAD_INIT(mylist);
-			numl new_nl ={start,0,mylist};
-
-			root = calloc(1,sizeof(numl));
-			root[0]= new_nl;
-			INIT_LIST_HEAD(&(root->my_list));
-			j=0;
-
-			for(j=start;j<(first->num);j++)
-				add_element(root,j,all,all_len,s_all);
-			do_merge(HEAD,((mlr+i)->item),root);
-			free(root);
-			break;
-		}
-
-		else
-			++flag;
-	}
-
-	if(flag==*len_of_mlr){
-
-		multil *tmp;
-		struct list_head mylist = LIST_HEAD_INIT(mylist);
-		numl new_nl ={start,0,mylist};
-
-		if(*s_mlr<=*len_of_mlr ){
-			tmp = realloc(mlr,(*len_of_mlr+1)*sizeof(multil));
-			if(tmp)
-				mlr=tmp;
-			else
-				exit(0);
-			*s_mlr=*s_mlr+1;
-		}
-
-		root = calloc(1,sizeof(numl));
-		root[0]= new_nl;
-		INIT_LIST_HEAD(&(root->my_list));
-		mlr[i].item = root;
-
-		for(j=start;j<stop+1;j++)
-			add_element(root,j,all,all_len,s_all);
-
-		*len_of_mlr= *len_of_mlr+1;
-		*mlr_ptr = mlr;
-	}
-	else{
-
-		*mlr_ptr = mlr;
-		i=0;
-		while(i<*len_of_mlr){
-			check_merge(mlr_ptr,all,len_of_mlr,i,all_len);
-			++i;
-		}
-	}
-	return 0;
+	if ( num >= first->num && num <= last->num)
+		return 0;
+	return 1;
 }
 
-void show_all_lists(multil* mlr, int len_of_mlr){
+int area_find_range(area *_area, int start, int stop){
 
 	int i;
-	numl *pos;
+	for (i=start;i<stop+1;i++)
+		if (area_find(_area,i))
+			return 1;
+	return 0;
+}
 
-	for(i=0;i<len_of_mlr;i++){
+int area_insert(d_linkd_list **heads, d_linkd_list **elements, int start, int stop, int *head_num, int *ele_num, int *head_space, int *ele_space){
+
+	int i,j;
+	area *last, *first, *_area;
+	d_linkd_list *head_list = *heads;
+	int best_idx = 0, max_match = 0;
+
+	FIND_BEST_AREA();
+
+	if (max_match == 0){
+		add_head(heads, head_num, head_space);
+		for (j=start;j<stop+1;j++)
+			add_element((*heads)[*head_num-1].item, j, elements, ele_num, ele_space);
+	}
+	else {
+		i = best_idx;
+		_area = ((head_list+best_idx)->item);
+		last = list_last_entry(&(_area->list),typeof(area),list);
+		first = list_first_entry(&(_area->list),typeof(area),list);
+
+		if (start<(first->num) && stop>(last->num))
+			NEW_D_LINKED_LIST (0,start,(stop+1),NONE);
+
+		else if (start>=(first->num) && start<=(last->num+1) && stop>(last->num))
+			NEW_D_LINKED_LIST ((1+last->num),(1+last->num),(stop+1),TAIL);
+
+		else if (start < (first->num) && (stop+1) >= (first->num))
+			NEW_D_LINKED_LIST (start,start,(first->num),HEAD);
+
+		*heads = head_list;
+	}
+
+	i=0;
+	while (i<*head_num) {
+		check_merge (heads,elements,head_num,i,ele_num);
+		++i;
+	}
+	return 0;
+}
+
+void area_dump(area *_area){
+
+	area *pos;
+	list_for_each_entry(pos,&(_area->list),list){
+		printf("%d, ",pos->num);
+	}
+}
+void show_all_areas(d_linkd_list* head_list, int head_num){
+
+	int i;
+	for (i=0;i<head_num;i++){
 		printf("List %d:\t",i);
-		list_for_each_entry(pos,&(((mlr+i)->item)->my_list),my_list){
-							printf("%d, ",pos->num);}
+		area_dump ((head_list+i)->item);
 		printf("\n");
 	}
 }
@@ -482,7 +332,7 @@ int input_handler(char input[10],int *op){
 	}
 	errcode=0;
 
-	if(!strcasecmp(act,"Input")) _act=0;
+	if(!strcasecmp(act,"Add")) _act=0;
 	else if (!strcasecmp(act,"Delete")) _act=1;
 	else if (!strcasecmp(act,"List")) _act=2;
 	else if (!strcasecmp(act,"Quit")) _act=3;
